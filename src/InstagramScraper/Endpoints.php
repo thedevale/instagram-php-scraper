@@ -13,6 +13,7 @@ class Endpoints
     const ACCOUNT_JSON_INFO = 'https://www.instagram.com/{username}/?__a=1';
     const ACCOUNT_ACTIVITY = 'https://www.instagram.com/accounts/activity/?__a=1';
     const MEDIA_JSON_INFO = 'https://www.instagram.com/p/{code}/?__a=1';
+    const MEDIA_QUERY_INFO = 'https://www.instagram.com/graphql/query/?query_hash=2efa04f61586458cef44441f474eee7c&variables={variables}';
     const MEDIA_JSON_BY_LOCATION_ID = 'https://www.instagram.com/explore/locations/{{facebookLocationId}}/?__a=1&max_id={{maxId}}';
     const MEDIA_JSON_BY_TAG = 'https://www.instagram.com/explore/tags/{tag}/?__a=1&max_id={max_id}';
     const GENERAL_SEARCH = 'https://www.instagram.com/web/search/topsearch/?query={query}&count={count}';
@@ -107,6 +108,10 @@ class Endpoints
     public static function getMediaJsonLink($code)
     {
         return str_replace('{code}', urlencode($code), static::MEDIA_JSON_INFO);
+    }
+
+    public static function getMediaJsonLinkV2($code){
+        return str_replace('{variables}', urlencode(json_encode(['shortcode' => $code])), static::MEDIA_QUERY_INFO);
     }
 
     public static function getMediasJsonByLocationIdLink($facebookLocationId, $maxId = '')

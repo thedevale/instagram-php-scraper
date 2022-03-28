@@ -47,7 +47,7 @@ class Instagram
     const X_IG_APP_ID = '936619743392459';
 
     /** @var CacheInterface $instanceCache */
-    protected static $instanceCache = null;
+    public static $instanceCache = null;
 
     public $pagingTimeLimitSec = self::PAGING_TIME_LIMIT_SEC;
     public $pagingDelayMinimumMicrosec = self::PAGING_DELAY_MINIMUM_MICROSEC;
@@ -62,8 +62,9 @@ class Instagram
     /**
      * Instagram constructor.
      * @param ClientInterface $client
+     * @param CacheInterface|null $cache
      */
-    public function __construct(ClientInterface $client)
+    public function __construct(ClientInterface $client,?CacheInterface $cache = null)
     {
         Request::setHttpClient($client);
     }
@@ -801,10 +802,9 @@ class Instagram
      * @throws InstagramException
      * @throws InstagramNotFoundException
      */
-    public function getMediaById($mediaId)
-    {
-        $mediaLink = Media::getLinkFromId($mediaId);
-        return $this->getMediaByUrl($mediaLink);
+    public function getMediaById($mediaId){
+        $code = Media::getCodeFromId($mediaId);
+        return $this->getMediaByCode($code);
     }
 
     /**
@@ -847,9 +847,30 @@ class Instagram
 
     public function getMediaByCode($mediaCode)
     {
+        return $this->getMediaByCodeV2($mediaCode);
         $url = Endpoints::getMediaPageLink($mediaCode);
         return $this->getMediaByUrl($url);
 
+    }
+
+    public function getMediaByCodeV2($mediaCode){
+        $url = Endpoints::getMediaJsonLinkV2($mediaCode);
+        $response = Request::get($url);
+
+        if (static::HTTP_NOT_FOUND === $response->code) {
+            throw new InstagramNotFoundException('Media with given code does not exist or account is private.');
+        }
+
+        if (static::HTTP_OK !== $response->code) {
+            throw new InstagramException('CODE: ' . $response->code, $response->code);
+        }
+
+        $mediaArray = $this->decodeRawBodyToJson($response->raw_body);
+        if (!isset($mediaArray['data']['shortcode_media'])) {
+            throw new InstagramException('Media with this code does not exist');
+        }
+
+        return Media::create($mediaArray['data']['shortcode_media']);
     }
 
     /**
@@ -2061,13 +2082,12 @@ class Instagram
 
     /**
      * @param $sessionId
-     *
+     * @param string|null $csrftoken
      * @return array
      * @throws InstagramAuthException
      */
-    public function loginWithSessionId($sessionId)
-    {
-        $session = ['sessionid' => $sessionId, 'csrftoken' => md5( rand( 1, 5000 ) )];
+    public function loginWithSessionId($sessionId,string $csrftoken = NULL){
+        $session = ['sessionid' => $sessionId, 'csrftoken' => ($csrftoken ?? md5( rand( 1, 5000 ) ))];
 
         if (!$this->isLoggedIn($session)) {
             throw new InstagramAuthException('Login with session went wrong. Please report issue.');
@@ -2079,11 +2099,72 @@ class Instagram
     }
 
     /**
+     * @param array $cookies
+     * @throws InstagramAuthException
+     */
+    public function loginWithFullCookies(array $cookies): array{
+        if (!$this->isCookiesLogged($cookies)) {
+            throw new InstagramAuthException('Login with session went wrong. Please report issue.');
+        } else {
+            $this->userSession = $cookies;
+        }
+
+        return $this->generateHeaders($this->userSession);
+    }
+
+    /**
      * @return string
      */
     private function getCacheKey()
     {
         return md5($this->sessionUsername);
+    }
+
+    /**
+     * @param array $cookies
+     *
+     * @return bool
+     */
+    public function isCookiesLogged(array $cookies){
+        if ($cookies === null || !isset($cookies['sessionid'])) {
+            return false;
+        }
+
+        $sessionId = $cookies['sessionid'];
+        $csrfToken = $cookies['csrftoken'];
+
+        $headers = [
+            'cookie' => "ig_cb=1; csrftoken=$csrfToken; sessionid=$sessionId;",
+            'referer' => Endpoints::BASE_URL . '/',
+            'x-csrftoken' => $csrfToken,
+            'X-CSRFToken' => $csrfToken,
+            'user-agent' => $this->getUserAgent(),
+        ];
+
+        try{
+            Request::post(Endpoints::BASE_URL.'/challenge/',$headers,[
+                'choice' => 0,
+                'next' => '%2F'
+            ]);
+            sleep(2);
+        }catch(\Throwable $e){
+        }
+
+        $response = Request::get(Endpoints::BASE_URL, $headers);
+        if ($response->code === 302) {
+            $response = Request::get($response->headers['Location'][0], $headers);
+            if ($response->code === 302) {
+                $response = Request::get($response->headers['Location'][0], $headers);
+            }
+        }
+        if ($response->code !== static::HTTP_OK) {
+            return false;
+        }
+        $cookies = $this->parseCookies($response->headers);
+        if (!isset($cookies['ds_user_id'])) {
+            return false;
+        }
+        return true;
     }
 
     /**
