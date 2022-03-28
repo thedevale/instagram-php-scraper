@@ -558,21 +558,6 @@ class Media extends AbstractModel
     }
 
     /**
-     * @param string
-     */
-    public function setLocationName($name)
-    {
-        $this->locationName = $name;
-    }
-    /**
-     * @param string
-     */
-    public function setLocationSlug($slug)
-    {
-        $this->locationSlug = $slug;
-    }
-
-    /**
      * @param $value
      * @param $prop
      */
