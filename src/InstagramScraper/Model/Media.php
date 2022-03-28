@@ -18,7 +18,6 @@ class Media extends AbstractModel
     const MEDIA_TYPE_IMAGE = 1;
     const MEDIA_TYPE_VIDEO = 2;
     const MEDIA_TYPE_CAROUSEL = 8;
-
     /**
      * @var string
      */
@@ -204,7 +203,7 @@ class Media extends AbstractModel
      * @var array
      */
     protected $taggedUsersIds=[];
-    
+
     private $media_type;
 
 
@@ -252,6 +251,14 @@ class Media extends AbstractModel
             $code = $alphabet[$remainder] . $code;
         }
         return $code;
+    }
+
+    /**
+     * @return array
+     */
+    public function getTaggedUsersIds(): array
+    {
+        return $this->taggedUsersIds;
     }
 
     /**
@@ -449,6 +456,14 @@ class Media extends AbstractModel
     }
 
     /**
+     * @param string
+     */
+    public function setLocationName($name)
+    {
+        $this->locationName = $name;
+    }
+
+    /**
      * @return bool
      */
     public function getCommentsDisabled()
@@ -511,6 +526,15 @@ class Media extends AbstractModel
     {
         return $this->locationSlug;
     }
+
+    /**
+     * @param string
+     */
+    public function setLocationSlug($slug)
+    {
+        $this->locationSlug = $slug;
+    }
+
     /**
      * @return string
      */
@@ -567,8 +591,8 @@ class Media extends AbstractModel
             case 'created_time':
                 $this->createdTime = (int)$value;
                 break;
-            case 'shortcode':
             case 'code':
+            case 'shortcode':
                 $this->shortCode = $value;
                 $this->link = Endpoints::getMediaPageLink($this->shortCode);
                 break;
@@ -581,8 +605,8 @@ class Media extends AbstractModel
             case 'comments':
                 $this->commentsCount = $arr[$prop]['count'];
                 break;
-            case 'edge_media_preview_like':
             case 'edge_liked_by':
+            case 'edge_media_preview_like':
             case 'likes':
                 $this->likesCount = $arr[$prop]['count'];
                 break;
@@ -660,7 +684,6 @@ class Media extends AbstractModel
                 }
                 break;
             case 'location':
-
                 if(isset($arr[$prop])) {
                     $this->locationId = $arr[$prop]['id'] ? $arr[$prop]['id'] : ($arr[$prop]['pk'] ?? null);
                     $this->locationName = $arr[$prop]['name'] ? $arr[$prop]['name'] : null;
@@ -776,7 +799,7 @@ class Media extends AbstractModel
                         break;
                     case static::MEDIA_TYPE_CAROUSEL:
                         $this->type = static::TYPE_CAROUSEL;
-                        break;                    
+                        break;
                 }
                 break;
             case 'image_versions2':
@@ -860,14 +883,14 @@ class Media extends AbstractModel
                     break;
                 case static::MEDIA_TYPE_VIDEO:
                     $carouselMedia->setType(static::TYPE_VIDEO);
-                    break;                 
+                    break;
             }
-            
-            if($carouselArray['media_type'] == static::MEDIA_TYPE_VIDEO && isset($carouselArray['video_versions'])){                
+
+            if($carouselArray['media_type'] == static::MEDIA_TYPE_VIDEO && isset($carouselArray['video_versions'])){
                 if (isset($mediaArray['view_count'])) {
                     $carouselMedia->setVideoViews($carouselArray['view_count']);
                 }
-                
+
                 foreach ($carouselArray['video_versions'] as $media) {
                     switch ($media['type']) {
                         case 101:
@@ -882,8 +905,8 @@ class Media extends AbstractModel
                     }
                 }
             }
-            
-            if(($carouselArray['media_type'] == static::MEDIA_TYPE_IMAGE || $carouselArray['media_type'] == static::MEDIA_TYPE_VIDEO) && isset($carouselArray['image_versions2'])){                 
+
+            if(($carouselArray['media_type'] == static::MEDIA_TYPE_IMAGE || $carouselArray['media_type'] == static::MEDIA_TYPE_VIDEO) && isset($carouselArray['image_versions2'])){
                 foreach ($carouselArray['image_versions2']['candidates'] as $media) {
                     $mediasUrl[] = $media['url'];
                     switch ($media['width']) {
@@ -901,7 +924,7 @@ class Media extends AbstractModel
                             break;
                     }
                 }
-            }   
+            }
         }
         array_push($instance->carouselMedia, $carouselMedia);
         return $mediaArray;
@@ -912,7 +935,7 @@ class Media extends AbstractModel
      *
      * @return array
      */
-    private static function getImageUrls($imageUrl): array
+    private static function getImageUrls($imageUrl)
     {
         $parts = explode('/', parse_url($imageUrl)['path']);
         $imageName = $parts[sizeof($parts) - 1];
