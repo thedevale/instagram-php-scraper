@@ -2244,6 +2244,9 @@ class Instagram
                 ['username' => $this->sessionUsername, 'enc_password' => '#PWD_INSTAGRAM_BROWSER:0:' . time() . ':' . $this->sessionPassword]);
 
             if (isset($response->body->message) && $response->body->message == 'checkpoint_required') {
+                if(is_null($twoStepVerificator)){
+                    throw new InstagramAuthException("CHECKPOINT REQUIRED");
+                }
                 $response = $this->verifyTwoStep($response, $cookies, $twoStepVerificator);
             }
 
@@ -2296,7 +2299,7 @@ class Instagram
      */
     public function loginWithFullCookies(array $cookies): array{
         if (!$this->isCookiesLogged($cookies)) {
-            throw new InstagramAuthException('Login with session went wrong. Please report issue.');
+            throw new InstagramAuthException('Login with cookies went wrong. Please report issue.');
         } else {
             $this->userSession = $cookies;
         }
