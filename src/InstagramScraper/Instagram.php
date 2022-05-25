@@ -511,8 +511,7 @@ class Instagram
         ];
         $endPoint = Endpoints::USER_FEED_hash . '&variables='.json_encode($vars);
 
-        $response = Request::get($endPoint,
-            $this->generateHeaders($this->userSession));
+        $response = Request::get($endPoint, $this->generateHeaders($this->userSession));
 
        if ($response->code === static::HTTP_NOT_FOUND) {
            throw new InstagramNotFoundException('Account with given username does not exist.');
@@ -677,8 +676,7 @@ class Instagram
      */
     public function getActivity(): Activity
     {
-        $response = Request::get(Endpoints::getActivityUrl(),
-            $this->generateHeaders($this->userSession));
+        $response = Request::get(Endpoints::getActivityUrl(), $this->generateHeaders($this->userSession));
 
         if ($response->code === static::HTTP_NOT_FOUND) {
             throw new InstagramNotFoundException('Account with given username does not exist.');
@@ -1024,7 +1022,7 @@ class Instagram
 
     public function getMediaByCodeV2($mediaCode){
         $url = Endpoints::getMediaJsonLinkV2($mediaCode);
-        $response = Request::get($url);
+        $response = Request::get($url,$this->generateHeaders($this->userSession));
 
         if (static::HTTP_NOT_FOUND === $response->code) {
             throw new InstagramNotFoundException('Media with given code does not exist or account is private.');
