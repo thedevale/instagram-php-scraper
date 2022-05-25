@@ -1325,6 +1325,26 @@ class Instagram
     }
 
     /**
+     * @param $code
+     * @return mixed
+     * @throws ClientExceptionInterface
+     * @throws InstagramException
+     */
+    public function getMediaLikesCountByCode($code){
+        $commentsUrl = Endpoints::getLastLikesByCode($code, 10, null);
+        $response = Request::get($commentsUrl, $this->generateHeaders($this->userSession));
+        if ($response->code !== static::HTTP_OK) {
+            throw new InstagramException('Response code is ' . $response->code . ': ' . static::httpCodeToString($response->code) . '.' .
+                'Something went wrong. Please report issue.', $response->code, static::getErrorBody($response->body));
+        }
+
+        $this->parseCookies($response->headers);
+
+        $jsonResponse = $this->decodeRawBodyToJson($response->raw_body);
+        return $jsonResponse['data']['shortcode_media']['edge_liked_by']['count'];
+    }
+
+    /**
      * @param string $id
      *
      * @return Account
@@ -1487,23 +1507,22 @@ class Instagram
             throw new InstagramException('Response decoding failed. Returned data corrupted or this library outdated. Please report issue');
         }
 
-        if (empty($arr['graphql']['hashtag']['edge_hashtag_to_media']['count'])) {
-            return $toReturn;
-        }
-
-        $nodes = $arr['graphql']['hashtag']['edge_hashtag_to_media']['edges'];
-
-        if (empty($nodes)) {
-            return $toReturn;
-        }
+        $rootKey = array_key_exists('graphql', $arr) ? 'graphql' : 'data';
+        $nodes = $arr[$rootKey]['hashtag']['edge_hashtag_to_media']['edges'] ?? [];
 
         foreach ($nodes as $mediaArray) {
             $medias[] = Media::create($mediaArray['node']);
         }
 
-        $maxId = $arr['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['end_cursor'];
-        $hasNextPage = $arr['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['has_next_page'];
-        $count = $arr['graphql']['hashtag']['edge_hashtag_to_media']['count'];
+        if(isset($arr[$rootKey]['hashtag']['edge_hashtag_to_top_posts']['edges'])){
+            foreach (($arr[$rootKey]['hashtag']['edge_hashtag_to_top_posts']['edges'] ?? []) as $mediaArray) {
+                $medias[] = Media::create($mediaArray['node']);
+            }
+        }
+
+        $maxId = $arr[$rootKey]['hashtag']['edge_hashtag_to_media']['page_info']['end_cursor'];
+        $hasNextPage = $arr[$rootKey]['hashtag']['edge_hashtag_to_media']['page_info']['has_next_page'];
+        $count = $arr[$rootKey]['hashtag']['edge_hashtag_to_media']['count'];
 
         $toReturn = [
             'medias' => $medias,
