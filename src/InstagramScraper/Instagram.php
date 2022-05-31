@@ -2236,7 +2236,13 @@ class Instagram
                 throw new InstagramException('Response code is ' . $response->code . ': ' . static::httpCodeToString($response->code) . '.' .
                                              'Something went wrong. Please report issue.', $response->code, static::getErrorBody($response->body));
             }
-            preg_match('/"csrf_token":"(.*?)"/', $response->body, $match);
+
+            $body = $response->body;
+            if(is_object($response->body)){
+                $body = $response->raw_body;
+            }
+            preg_match('/"csrf_token":"(.*?)"/', $body, $match);
+
             $csrfToken = isset($match[1]) ? $match[1] : '';
             $cookies = $this->parseCookies($response->headers);
 
@@ -2276,7 +2282,7 @@ class Instagram
                 }
             }
 
-            if (is_object($response->body) && !$response->body->authenticated) {
+            if (is_object($response->body) && !(property_exists($response->body,'authenticated') && $response->body->authenticated)) {
                 throw new InstagramAuthException('User credentials are wrong.');
             }
 
