@@ -16,6 +16,7 @@ class Endpoints
     const MEDIA_QUERY_INFO = 'https://www.instagram.com/graphql/query/?query_hash=2efa04f61586458cef44441f474eee7c&variables={variables}';
     const MEDIA_JSON_BY_LOCATION_ID = 'https://www.instagram.com/explore/locations/{{facebookLocationId}}/?__a=1&max_id={{maxId}}';
     const MEDIA_JSON_BY_TAG = 'https://www.instagram.com/explore/tags/{tag}/?__a=1&max_id={max_id}';
+    const MEDIA_JSON_BY_TAG_V2 = 'https://www.instagram.com/graphql/query/?query_hash=9b498c08113f1e09617a1703c22b2f32&variables={variables}';
     const GENERAL_SEARCH = 'https://www.instagram.com/web/search/topsearch/?query={query}&count={count}';
     const ACCOUNT_JSON_INFO_BY_ID = 'ig_user({userId}){id,username,external_url,full_name,profile_pic_url,biography,followed_by{count},follows{count},media{count},is_private,is_verified}';
     const COMMENTS_BEFORE_COMMENT_ID_BY_CODE = 'https://www.instagram.com/graphql/query/?query_hash=33ba35852cb50da46f5b5e889df7d159&variables={variables}';
@@ -122,8 +123,18 @@ class Endpoints
 
     public static function getMediasJsonByTagLink($tag, $maxId = '')
     {
+        return self::getMediasJsonByTagV2($tag,12,$maxId);
         $url = str_replace('{tag}', urlencode($tag), static::MEDIA_JSON_BY_TAG);
         return str_replace('{max_id}', urlencode($maxId), $url);
+    }
+
+    public static function getMediasJsonByTagV2($tag, $first = 12, $after = ''){
+
+        return str_replace('{variables}',urlencode(json_encode([
+            'tag_name' => $tag,
+            'first' => $first,
+            'after' => $after
+        ])),static::MEDIA_JSON_BY_TAG_V2);
     }
 
     public static function getGeneralSearchJsonLink($query, $count = 10)
